@@ -7,3 +7,105 @@
 
 
 
+class No:
+    def __init__(self, data, horario, linha):
+                                                      # Guarda as informações originais do registro
+        self.data = data
+        self.horario = horario
+        self.linha = linha
+        
+                                                       # Cria uma tupla (data, horario, linha) para a chave de ordenação.
+        
+        self.chave = (data, horario, linha) 
+        
+                                                       # Ponteiros para os nós filhos (esquerda = anteriores, direita = posteriores)
+        self.esquerda = None
+        self.direita = None
+
+class ArvoreChegadas:
+    def __init__(self):
+                                                       # A árvore sempre inicia vazia (sem nenhum nó no topo)
+        self.raiz = None
+
+    def registrar_chegada(self, data, horario, linha): # (R1)
+        nova_chave = (data, horario, linha)
+        
+                                                       # Se a árvore estiver vazia, o novo registro vira a raiz
+        if self.raiz is None:
+            self.raiz = No(data, horario, linha)
+            return "OK"
+            
+                                                       # Variável para percorrer a árvore, começando sempre pelo topo (raiz)
+        atual = self.raiz
+        
+        while True:
+                                                           # R1 exige tratamento se a chegada já foi registrada, retornando DUPLICADO
+            if nova_chave == atual.chave:
+                return "DUPLICADO"
+                
+            if nova_chave < atual.chave:
+                                                              # Se a chave for menor, precisamos descer pelo lado esquerdo
+                if atual.esquerda is None:
+                                                                  # Achou um espaço vazio, pendura o novo nó aqui e finaliza
+                    atual.esquerda = No(data, horario, linha)
+                    return "OK"
+                                                              # Se não estiver vazio, move o foco para o nó da esquerda e repete o laço
+                atual = atual.esquerda
+            else:
+                                                              # Se a chave for maior, precisamos descer pelo lado direito
+                if atual.direita is None:
+                                                              # Achou um espaço vazio, pendura o novo nó aqui e finaliza
+                    atual.direita = No(data, horario, linha)
+                    return "OK"
+                                                              # Se não estiver vazio, move o foco para o nó da direita e repete o laço
+                atual = atual.direita
+
+    def buscar_chegada(self, data, horario, linha): # (R2)
+        chave_busca = (data, horario, linha)
+        atual = self.raiz
+        
+                                                              # Percorre a árvore enquanto houver nós pelo caminho
+        while atual is not None:
+            if chave_busca == atual.chave:
+                                                               # Encontrou o registro exato
+                return "ACHOU"
+            elif chave_busca < atual.chave:
+                                                               # A chave buscada é menor, então ignora a direita e desce pela esquerda
+                atual = atual.esquerda
+            else:
+                                                               # A chave buscada é maior, então ignora a esquerda e desce pela direita
+                atual = atual.direita
+                
+                                                                # O laço terminou e encontrou um espaço vazio (None), logo o registro não existe
+        return "NAO"
+
+
+
+
+R3 IRANETES
+
+
+
+
+
+R4 IRANETES
+
+
+
+
+R5 BAIANO
+
+
+
+
+R6 BAIANO
+
+
+
+
+R7 ARTHUR
+
+
+
+
+R8 BAIANO
