@@ -81,10 +81,66 @@ class ArvoreChegadas:
 
 
 
-
+"""
 R3 IRANETES
+"""
+def _converter_para_datetime(data_str, horario_str):
+    """Função auxiliar para converter strings em objetos datetime para comparação precisa."""
+    return datetime.strptime(f"{data_str} {horario_str}", "%Y-%m-%d %H:%M")
 
 
+def proximo(data, horario):
+    """
+    R3: Retorna a primeira chegada registrada a partir daquele instante, de qualquer linha.
+    """
+    instante_busca = _converter_para_datetime(data, horario)
+    
+    # Ordena o histórico para garantir a ordem cronológica correta
+    chegadas_ordenadas = sorted(
+        historico_chegadas, 
+        key=lambda c: _converter_para_datetime(c["data"], c["horario"])
+    )
+    
+    # Busca a primeira chegada que acontece no mesmo instante ou depois
+    for chegada in chegadas_ordenadas:
+        instante_chegada = _converter_para_datetime(chegada["data"], chegada["horario"])
+        if instante_chegada >= instante_busca:
+            return chegada
+
+    # Tratamento caso não haja nenhuma chegada após o horário informado
+    return "Nenhum ônibus registrado a partir deste horário."
+
+
+def proximo_da_linha(data, horario, linha):
+    """
+    R4: Retorna a data e o horário da primeira chegada da linha a partir daquele instante.
+    Também calcula o tempo de espera.
+    """
+    instante_busca = _converter_para_datetime(data, horario)
+    
+    # Filtra as chegadas apenas da linha desejada e ordena cronologicamente
+    chegadas_da_linha = [c for c in historico_chegadas if c["linha"] == linha]
+    chegadas_ordenadas = sorted(
+        chegadas_da_linha, 
+        key=lambda c: _converter_para_datetime(c["data"], c["horario"])
+    )
+    
+    # Busca a primeira chegada a partir do instante
+    for chegada in chegadas_ordenadas:
+        instante_chegada = _converter_para_datetime(chegada["data"], chegada["horario"])
+        if instante_chegada >= instante_busca:
+            # Calcula a diferença de tempo (espera)
+            tempo_espera = instante_chegada - instante_busca
+            minutos_espera = int(tempo_espera.total_seconds() / 60)
+            
+            return {
+                "data": chegada["data"],
+                "horario": chegada["horario"],
+                "tempo_espera_minutos": minutos_espera
+            }
+            
+    # Tratamento caso não haja nenhuma chegada da linha após o horário informado
+    return f"Nenhum ônibus da linha {linha} registrado a partir deste horário."
 
 
 
