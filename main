@@ -27,7 +27,7 @@ class ArvoreChegadas:
                                                        # A árvore sempre inicia vazia (sem nenhum nó no topo)
         self.raiz = None
 
-    def registrar_chegada(self, data, horario, linha): # (R1)
+    def registrar_chegada(self, data, horario, linha):         # (R1)
         nova_chave = (data, horario, linha)
         
                                                        # Se a árvore estiver vazia, o novo registro vira a raiz
@@ -60,7 +60,7 @@ class ArvoreChegadas:
                                                               # Se não estiver vazio, move o foco para o nó da direita e repete o laço
                 atual = atual.direita
 
-    def buscar_chegada(self, data, horario, linha): # (R2)
+    def buscar_chegada(self, data, horario, linha):             # (R2)
         chave_busca = (data, horario, linha)
         atual = self.raiz
         
@@ -81,70 +81,58 @@ class ArvoreChegadas:
 
 
 
-"""
-R3 IRANETES
-"""
-def _converter_para_datetime(data_str, horario_str):
-    """Função auxiliar para converter strings em objetos datetime para comparação precisa."""
-    return datetime.strptime(f"{data_str} {horario_str}", "%Y-%m-%d %H:%M")
+def proximo(self, data, horario):                                       #(R3)
+        atual = self.raiz
+        melhor = None
+        
+        while atual is not None:
+                                                                                    # Comparamos apenas data e horário usando tuplas
+            if (atual.data, atual.horario) >= (data, horario):
+                                                                                    # Este nó é um candidato válido. Guardamos ele.
+                melhor = atual
+                                                                                    # Como queremos o PRIMEIRO a partir do instante, 
+                                                                                    # descemos para a esquerda para tentar achar um ainda mais cedo.
+                atual = atual.esquerda
+            else:
+                                                                                    # Se o nó atual é de um instante anterior ao que buscamos,
+                                                                                    # a resposta só pode estar na subárvore da direita.
+                atual = atual.direita
+                
+        if melhor is not None:
+            return f"{melhor.data} {melhor.horario} {melhor.linha}"
+        return "NENHUM"
 
-
-def proximo(data, horario):
-    """
-    R3: Retorna a primeira chegada registrada a partir daquele instante, de qualquer linha.
-    """
-    instante_busca = _converter_para_datetime(data, horario)
-    
-    # Ordena o histórico para garantir a ordem cronológica correta
-    chegadas_ordenadas = sorted(
-        historico_chegadas, 
-        key=lambda c: _converter_para_datetime(c["data"], c["horario"])
-    )
-    
-    # Busca a primeira chegada que acontece no mesmo instante ou depois
-    for chegada in chegadas_ordenadas:
-        instante_chegada = _converter_para_datetime(chegada["data"], chegada["horario"])
-        if instante_chegada >= instante_busca:
-            return chegada
-
-    # Tratamento caso não haja nenhuma chegada após o horário informado
-    return "Nenhum ônibus registrado a partir deste horário."
-
-
-def proximo_da_linha(data, horario, linha):
-    """
-    R4: Retorna a data e o horário da primeira chegada da linha a partir daquele instante.
-    Também calcula o tempo de espera.
-    """
-    instante_busca = _converter_para_datetime(data, horario)
-    
-    # Filtra as chegadas apenas da linha desejada e ordena cronologicamente
-    chegadas_da_linha = [c for c in historico_chegadas if c["linha"] == linha]
-    chegadas_ordenadas = sorted(
-        chegadas_da_linha, 
-        key=lambda c: _converter_para_datetime(c["data"], c["horario"])
-    )
-    
-    # Busca a primeira chegada a partir do instante
-    for chegada in chegadas_ordenadas:
-        instante_chegada = _converter_para_datetime(chegada["data"], chegada["horario"])
-        if instante_chegada >= instante_busca:
-            # Calcula a diferença de tempo (espera)
-            tempo_espera = instante_chegada - instante_busca
-            minutos_espera = int(tempo_espera.total_seconds() / 60)
+    def proximo_da_linha(self, data, horario, linha):                     #(R4)
+        melhor = None
+        
+                                                                                    # O enunciado diz que para R4 na Fase 1 basta a solução mais simples na própria árvore.
+                                                                                    # Usamos uma função recursiva que varre os caminhos possíveis.
+        def buscar_linha(no):
+            nonlocal melhor
+            if no is None:
+                return
             
-            return {
-                "data": chegada["data"],
-                "horario": chegada["horario"],
-                "tempo_espera_minutos": minutos_espera
-            }
+                                                                                    # Se o nó atende à data/hora e é da linha exata
+            if (no.data, no.horario) >= (data, horario) and no.linha == linha:
+                                                                                                # Guarda se for o primeiro encontrado ou se for mais cedo que o guardado anteriormente
+                if melhor is None or (no.data, no.horario) < (melhor.data, melhor.horario):
+                    melhor = no
             
-    # Tratamento caso não haja nenhuma chegada da linha após o horário informado
-    return f"Nenhum ônibus da linha {linha} registrado a partir deste horário."
-
-
-
-R4 IRANETES
+                                                                                                # Otimização da busca:
+            if (no.data, no.horario) < (data, horario):
+                                                                                                # Se o nó aconteceu antes do horário buscado, ignoramos a esquerda inteira
+                buscar_linha(no.direita)
+            else:
+                                                                                                    # Se aconteceu depois, temos que olhar a esquerda (pode ter um mais cedo)
+                                                                                                    # e a direita (caso o nó atual não seja da linha certa e a linha certa esteja lá)
+                buscar_linha(no.esquerda)
+                buscar_linha(no.direita)
+                
+        buscar_linha(self.raiz)
+        
+        if melhor is not None:
+            return f"{melhor.data} {melhor.horario}"
+        return "NENHUM"
 
 
 
