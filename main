@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+
+
 # AQUI IREMOS FAZER A IMPLEMENTACAO DAS FUNCOES R1 A R8 (DATA COMBINADA PARA ENTREGA - 25/10)
 
 # Arthur Lira - R1, R2 (R7?)
@@ -107,7 +110,7 @@ class ArvoreChegadas:
         
                                                                                                 # O enunciado diz que para R4 na Fase 1 basta a solução mais simples na própria árvore.
                                                                                                 # Usamos uma função recursiva que varre os caminhos possíveis.
-    def buscar_linha(no):
+        def buscar_linha(no):
             nonlocal melhor
             if no is None:
                 return
@@ -143,7 +146,7 @@ class ArvoreChegadas:
 
         resultados = []
 
-    def in_order(no):
+        def in_order(no):
             if no is None:
                 return
             
@@ -171,13 +174,13 @@ class ArvoreChegadas:
     def remover_chegada(self, data, horario, linha):                            # (R6)
         chave_remocao = (data, horario, linha)
         
-    def get_minimo(no):                                                     # Função auxiliar para achar o sucessor
+        def get_minimo(no):                                                     # Função auxiliar para achar o sucessor
             atual = no
             while atual.esquerda is not None:
                 atual = atual.esquerda
             return atual
 
-    def remover_recursivo(no, chave):
+        def remover_recursivo(no, chave):
             if no is None:
                 return no, False                                                # Chegou no fim e não achou
                 
@@ -219,7 +222,7 @@ class ArvoreChegadas:
     def altura(self):                                                           # (R7)
         def calcular_altura(no):
             if no is None:
-                                                                                # O "chão" da árvore (vazio) tem altura 0
+                                                                                # O chão da árvore (vazio) tem altura 0
                 return 0
                 
                                                                                 # Pergunta a altura da perna esquerda
@@ -238,4 +241,55 @@ class ArvoreChegadas:
 
 
 
-R8 BAIANO
+    def espera_semanal(self, linha, data, horario, k):                          # (R8)
+        k = int(k)
+                                                                                # O enunciado permite usar a biblioteca de datas no núcleo
+        instante_base = datetime.strptime(f"{data} {horario}", "%Y-%m-%d %H:%M:%S")
+        
+        resultados = []
+        
+                                                                                # Retrocede semana a semana, da mais antiga (k-1) até a atual (0)
+        for semanas_atras in range(k - 1, -1, -1):
+            instante_busca = instante_base - timedelta(weeks=semanas_atras)
+            data_busca = instante_busca.strftime("%Y-%m-%d")
+            horario_busca = instante_busca.strftime("%H:%M:%S")
+            
+            melhor_no = None
+            
+                                                                                # Busca na árvore a chegada da linha a partir daquele momento
+        def buscar_linha_recursivo(no):
+                nonlocal melhor_no
+                if no is None:
+                    return
+                
+                                                                                # 1. Verifica se o nó é um candidato válido no MESMO DIA
+                if no.data == data_busca and no.horario >= horario_busca and no.linha == linha:
+                    if melhor_no is None or no.horario < melhor_no.horario:
+                        melhor_no = no
+                
+                                                                                # 2. Otimização da descida (poda de caminhos)
+                if no.data < data_busca or (no.data == data_busca and no.horario < horario_busca):
+                                                                                # Muito cedo: a resposta só pode estar à direita
+                    buscar_linha_recursivo(no.direita)
+                elif no.data > data_busca:
+                                                                                # Dia seguinte ou futuro: a resposta ficou para trás (esquerda)
+                    buscar_linha_recursivo(no.esquerda)
+                else:
+                                                                                # Dia e horário válidos: olha esquerda (pode ter mais cedo) 
+                                                                                # e direita (se for outra linha)
+                    buscar_linha_recursivo(no.esquerda)
+                    buscar_linha_recursivo(no.direita)
+
+            buscar_linha_recursivo(self.raiz)
+            
+            if melhor_no is not None:
+                                                                                # Calcula a espera em segundos
+                instante_chegada = datetime.strptime(f"{melhor_no.data} {melhor_no.horario}", "%Y-%m-%d %H:%M:%S")
+                espera_segundos = int((instante_chegada - instante_busca).total_seconds())
+                resultados.append(f"{data_busca} {espera_segundos}")
+            else:
+                                                                                # Tratamento quando a linha não passou mais naquele dia
+                resultados.append(f"{data_busca} NAOPASSOU")
+                
+                                                                                # Junta as k linhas com quebra de linha
+        return "\n".join(resultados)
