@@ -9,42 +9,42 @@
 
 class No:
     def __init__(self, data, horario, linha):
-                                                      # Guarda as informações originais do registro
+                                                               # Guarda as informações originais do registro
         self.data = data
         self.horario = horario
         self.linha = linha
         
-                                                       # Cria uma tupla (data, horario, linha) para a chave de ordenação.
+                                                               # Cria uma tupla (data, horario, linha) para a chave de ordenação.
         
         self.chave = (data, horario, linha) 
         
-                                                       # Ponteiros para os nós filhos (esquerda = anteriores, direita = posteriores)
+                                                               # Ponteiros para os nós filhos (esquerda = anteriores, direita = posteriores)
         self.esquerda = None
         self.direita = None
 
 class ArvoreChegadas:
     def __init__(self):
-                                                       # A árvore sempre inicia vazia (sem nenhum nó no topo)
+                                                               # A árvore sempre inicia vazia (sem nenhum nó no topo)
         self.raiz = None
 
-    def registrar_chegada(self, data, horario, linha):         # (R1)
+    def registrar_chegada(self, data, horario, linha):      # (R1)
         nova_chave = (data, horario, linha)
         
-                                                       # Se a árvore estiver vazia, o novo registro vira a raiz
+                                                               # Se a árvore estiver vazia, o novo registro vira a raiz
         if self.raiz is None:
             self.raiz = No(data, horario, linha)
             return "OK"
             
-                                                       # Variável para percorrer a árvore, começando sempre pelo topo (raiz)
+                                                               # Variável para percorrer a árvore, começando sempre pelo topo (raiz)
         atual = self.raiz
         
         while True:
-                                                           # R1 exige tratamento se a chegada já foi registrada, retornando DUPLICADO
+                                                               # R1 exige tratamento se a chegada já foi registrada, retornando DUPLICADO
             if nova_chave == atual.chave:
                 return "DUPLICADO"
                 
             if nova_chave < atual.chave:
-                                                              # Se a chave for menor, precisamos descer pelo lado esquerdo
+                                                               # Se a chave for menor, precisamos descer pelo lado esquerdo
                 if atual.esquerda is None:
                                                                   # Achou um espaço vazio, pendura o novo nó aqui e finaliza
                     atual.esquerda = No(data, horario, linha)
@@ -105,14 +105,14 @@ def proximo(self, data, horario):                                       #(R3)
     def proximo_da_linha(self, data, horario, linha):                     #(R4)
         melhor = None
         
-                                                                                    # O enunciado diz que para R4 na Fase 1 basta a solução mais simples na própria árvore.
-                                                                                    # Usamos uma função recursiva que varre os caminhos possíveis.
+                                                                                                # O enunciado diz que para R4 na Fase 1 basta a solução mais simples na própria árvore.
+                                                                                                # Usamos uma função recursiva que varre os caminhos possíveis.
         def buscar_linha(no):
             nonlocal melhor
             if no is None:
                 return
             
-                                                                                    # Se o nó atende à data/hora e é da linha exata
+                                                                                                # Se o nó atende à data/hora e é da linha exata
             if (no.data, no.horario) >= (data, horario) and no.linha == linha:
                                                                                                 # Guarda se for o primeiro encontrado ou se for mais cedo que o guardado anteriormente
                 if melhor is None or (no.data, no.horario) < (melhor.data, melhor.horario):
@@ -123,8 +123,8 @@ def proximo(self, data, horario):                                       #(R3)
                                                                                                 # Se o nó aconteceu antes do horário buscado, ignoramos a esquerda inteira
                 buscar_linha(no.direita)
             else:
-                                                                                                    # Se aconteceu depois, temos que olhar a esquerda (pode ter um mais cedo)
-                                                                                                    # e a direita (caso o nó atual não seja da linha certa e a linha certa esteja lá)
+                                                                                                # Se aconteceu depois, temos que olhar a esquerda (pode ter um mais cedo)
+                                                                                                # e a direita (caso o nó atual não seja da linha certa e a linha certa esteja lá)
                 buscar_linha(no.esquerda)
                 buscar_linha(no.direita)
                 
@@ -137,12 +137,81 @@ def proximo(self, data, horario):                                       #(R3)
 
 
 
-R5 BAIANO
+def entre(self, data1, horario1, data2, horario2):                          # (R5)
+        if (data1, horario1) > (data2, horario2):                               # Se o primeiro instante for posterior, responde 0
+            return "0"
 
+        resultados = []
 
+        def in_order(no):
+            if no is None:
+                return
+            
+            instante_no = (no.data, no.horario)
+            instante_inicio = (data1, horario1)
+            instante_fim = (data2, horario2)
 
+            if instante_no >= instante_inicio:                                  # Se pode haver algo no limite ou antes, desce esquerda
+                in_order(no.esquerda)
+                
+            if instante_inicio <= instante_no <= instante_fim:                  # Se o nó está dentro do intervalo, guarda ele
+                resultados.append(f"{no.data} {no.horario} {no.linha}")
+                
+            if instante_no <= instante_fim:                                     # Se pode haver algo no limite ou depois, desce direita
+                in_order(no.direita)
 
-R6 BAIANO
+        in_order(self.raiz)
+
+        resposta = f"{len(resultados)}"                                         # O formato exige primeiro a quantidade k
+        for res in resultados:
+            resposta += f"\n{res}"                                              # Depois, as k linhas no formato data hora linha
+            
+        return resposta
+
+    def remover_chegada(self, data, horario, linha):                            # (R6)
+        chave_remocao = (data, horario, linha)
+        
+        def get_minimo(no):                                                     # Função auxiliar para achar o sucessor
+            atual = no
+            while atual.esquerda is not None:
+                atual = atual.esquerda
+            return atual
+
+        def remover_recursivo(no, chave):
+            if no is None:
+                return no, False                                                # Chegou no fim e não achou
+                
+            if chave < no.chave:
+                no.esquerda, removido = remover_recursivo(no.esquerda, chave)
+            elif chave > no.chave:
+                no.direita, removido = remover_recursivo(no.direita, chave)
+            else:
+                removido = True                                                 # Achamos o registro para apagar!
+                
+                if no.esquerda is None:                                         # Casos 1 e 2: Nó sem filho na esquerda
+                    return no.direita, removido
+                elif no.direita is None:                                        # Caso 2: Nó sem filho na direita
+                    return no.esquerda, removido
+                    
+                                                                                # Caso 3: Nó tem dois filhos. Regra do sucessor
+                sucessor = get_minimo(no.direita)                               # Pega o menor nó da direita
+                
+                no.data = sucessor.data                                         # Copia os dados do sucessor para cá
+                no.horario = sucessor.horario
+                no.linha = sucessor.linha
+                no.chave = sucessor.chave
+                
+                                                                                # Agora manda remover o sucessor lá de baixo
+                no.direita, _ = remover_recursivo(no.direita, sucessor.chave)
+                
+            return no, removido
+
+        self.raiz, sucesso = remover_recursivo(self.raiz, chave_remocao)
+        
+        if sucesso:
+            return "OK"
+        else:
+            return "NAO"
 
 
 
