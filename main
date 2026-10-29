@@ -81,7 +81,7 @@ class ArvoreChegadas:
 
 
 
-def proximo(self, data, horario):                                       #(R3)
+    def proximo(self, data, horario):                                       #(R3)
         atual = self.raiz
         melhor = None
         
@@ -107,7 +107,7 @@ def proximo(self, data, horario):                                       #(R3)
         
                                                                                                 # O enunciado diz que para R4 na Fase 1 basta a solução mais simples na própria árvore.
                                                                                                 # Usamos uma função recursiva que varre os caminhos possíveis.
-        def buscar_linha(no):
+    def buscar_linha(no):
             nonlocal melhor
             if no is None:
                 return
@@ -137,13 +137,13 @@ def proximo(self, data, horario):                                       #(R3)
 
 
 
-def entre(self, data1, horario1, data2, horario2):                          # (R5)
+    def entre(self, data1, horario1, data2, horario2):                          # (R5)
         if (data1, horario1) > (data2, horario2):                               # Se o primeiro instante for posterior, responde 0
             return "0"
 
         resultados = []
 
-        def in_order(no):
+    def in_order(no):
             if no is None:
                 return
             
@@ -171,13 +171,13 @@ def entre(self, data1, horario1, data2, horario2):                          # (R
     def remover_chegada(self, data, horario, linha):                            # (R6)
         chave_remocao = (data, horario, linha)
         
-        def get_minimo(no):                                                     # Função auxiliar para achar o sucessor
+    def get_minimo(no):                                                     # Função auxiliar para achar o sucessor
             atual = no
             while atual.esquerda is not None:
                 atual = atual.esquerda
             return atual
 
-        def remover_recursivo(no, chave):
+    def remover_recursivo(no, chave):
             if no is None:
                 return no, False                                                # Chegou no fim e não achou
                 
@@ -216,7 +216,24 @@ def entre(self, data1, horario1, data2, horario2):                          # (R
 
 
 
-R7 ARTHUR
+    def altura(self):                                                           # (R7)
+        def calcular_altura(no):
+            if no is None:
+                                                                                # O "chão" da árvore (vazio) tem altura 0
+                return 0
+                
+                                                                                # Pergunta a altura da perna esquerda
+            altura_esq = calcular_altura(no.esquerda)
+                                                                                # Pergunta a altura da perna direita
+            altura_dir = calcular_altura(no.direita)
+            
+                                                                                # Pega o maior caminho e soma 1 (o próprio nó)
+            if altura_esq > altura_dir:
+                return altura_esq + 1
+            else:
+                return altura_dir + 1
+                
+        return str(calcular_altura(self.raiz))
 
 
 
