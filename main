@@ -1,13 +1,5 @@
 from datetime import datetime, timedelta
-
-
-# AQUI IREMOS FAZER A IMPLEMENTACAO DAS FUNCOES R1 A R8 (DATA COMBINADA PARA ENTREGA - 25/10)
-
-# Arthur Lira - R1, R2 (R7?)
-# Iranetes - R3 e R4
-# Guilherme de Castro - R5, R6 (R8?)
-# Joao Victor - R7 e R8??
-
+import urllib.request
 
 
 class No:
@@ -293,3 +285,80 @@ class ArvoreChegadas:
                 
                                                                                 # Junta as k linhas com quebra de linha
         return "\n".join(resultados)
+
+def executar_testes_via_github(url_teste, url_gabarito):                       #--------------------tester-------------------------------
+    arvore = ArvoreChegadas()
+    
+    print(f"Puxando arquivo de teste: {url_teste.split('/')[-1]}...")
+    
+    resposta_teste = urllib.request.urlopen(url_teste)
+    linhas_teste = resposta_teste.read().decode('utf-8').splitlines()
+    
+    saidas_obtidas = []
+    
+    for linha in linhas_teste:
+        # IGNORA LINHAS EM BRANCO E COMENTÁRIOS QUE COMEÇAM COM #
+        if not linha.strip() or linha.strip().startswith('#'):
+            continue
+            
+        dados = linha.strip().split()
+        comando = dados[0].upper()
+        
+        # Mapeamento atualizado para os comandos do arquivo pequeno_2.txt
+        if comando == "REG":
+            resultado = arvore.registrar_chegada(dados[1], dados[2], dados[3])
+            saidas_obtidas.append(resultado)
+            
+        elif comando == "BUSCA":
+            resultado = arvore.buscar_chegada(dados[1], dados[2], dados[3])
+            saidas_obtidas.append(resultado)
+            
+        elif comando == "PROX":
+            resultado = arvore.proximo(dados[1], dados[2])
+            saidas_obtidas.append(resultado)
+            
+        elif comando == "PROXL":
+            resultado = arvore.proximo_da_linha(dados[1], dados[2], dados[3])
+            saidas_obtidas.append(resultado)
+            
+        elif comando == "ENTRE":
+            resultado = arvore.entre(dados[1], dados[2], dados[3], dados[4])
+            saidas_obtidas.append(resultado)
+            
+        elif comando == "REM":
+            resultado = arvore.remover_chegada(dados[1], dados[2], dados[3])
+            saidas_obtidas.append(resultado)
+            
+        elif comando == "ALT":
+            resultado = arvore.altura()
+            saidas_obtidas.append(resultado)
+            
+        elif comando == "SEMANA":
+            # O arquivo passa: SEMANA linha data horario k
+            resultado = arvore.espera_semanal(dados[1], dados[2], dados[3], dados[4])
+            saidas_obtidas.append(resultado)
+            
+    # Junta todas as respostas geradas pelos métodos com quebra de linha
+    resultado_da_sua_arvore = "\n".join(saidas_obtidas).strip()
+    
+    resposta_gabarito = urllib.request.urlopen(url_gabarito)
+    resultado_esperado = resposta_gabarito.read().decode('utf-8').strip()
+    
+    if resultado_da_sua_arvore == resultado_esperado:
+        print("SUCESSO! A saída da árvore é idêntica ao gabarito.")
+    else:
+        print("FALHA! A saída da árvore está diferente do esperado.")
+        print("\n--- O que sua árvore gerou ---")
+        print(resultado_da_sua_arvore)
+        print("\n--- O que era esperado ---")
+        print(resultado_esperado)
+
+
+if __name__ == "__main__":
+    # ATENÇÃO: Se no GitHub o arquivo ficou salvo como "pequeno_2.txt", atualize o final do link abaixo
+    link_teste = "https://raw.githubusercontent.com/arthurlira-hub/Problema2_PA3/Tester/dados_teste/pequeno.txt" 
+    link_gabarito_fase1 = "https://raw.githubusercontent.com/arthurlira-hub/Problema2_PA3/Tester/dados_teste/pequeno_esperado_fase1.txt"
+    link_gabarito_fase3 = "https://raw.githubusercontent.com/arthurlira-hub/Problema2_PA3/Tester/dados_teste/pequeno_esperado_fase3.txt"
+    
+    print("--- INICIANDO VALIDAÇÃO FASE 1 ---")
+    executar_testes_via_github(link_teste, link_gabarito_fase1)
