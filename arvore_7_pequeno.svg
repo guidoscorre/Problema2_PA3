@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1090" height="590" font-family="Segoe UI, Arial" font-size="13">
+<rect width="100%%" height="100%%" fill="white"/>
+<line x1="115" y1="80" x2="415" y2="190" stroke="#555" stroke-width="2"/>
+<line x1="415" y1="190" x2="265" y2="300" stroke="#555" stroke-width="2"/>
+<line x1="415" y1="190" x2="715" y2="300" stroke="#555" stroke-width="2"/>
+<line x1="715" y1="300" x2="565" y2="410" stroke="#555" stroke-width="2"/>
+<line x1="715" y1="300" x2="865" y2="410" stroke="#555" stroke-width="2"/>
+<line x1="865" y1="410" x2="1015" y2="520" stroke="#555" stroke-width="2"/>
+<rect x="56" y="51" width="118" height="58" rx="10" fill="#eef4ff" stroke="#2b5fab" stroke-width="2"/>
+<text x="115" y="72" text-anchor="middle">10-05 18:22:10</text>
+<text x="115" y="88" text-anchor="middle">136.1</text>
+<rect x="356" y="161" width="118" height="58" rx="10" fill="#eef4ff" stroke="#2b5fab" stroke-width="2"/>
+<text x="415" y="182" text-anchor="middle">10-05 18:31:45</text>
+<text x="415" y="198" text-anchor="middle">0.603</text>
+<rect x="206" y="271" width="118" height="58" rx="10" fill="#eef4ff" stroke="#2b5fab" stroke-width="2"/>
+<text x="265" y="292" text-anchor="middle">10-05 18:27:30</text>
+<text x="265" y="308" text-anchor="middle">136.3</text>
+<rect x="656" y="271" width="118" height="58" rx="10" fill="#eef4ff" stroke="#2b5fab" stroke-width="2"/>
+<text x="715" y="292" text-anchor="middle">10-05 18:40:00</text>
+<text x="715" y="308" text-anchor="middle">136.2</text>
+<rect x="506" y="381" width="118" height="58" rx="10" fill="#eef4ff" stroke="#2b5fab" stroke-width="2"/>
+<text x="565" y="402" text-anchor="middle">10-05 18:40:00</text>
+<text x="565" y="418" text-anchor="middle">136.1</text>
+<rect x="806" y="381" width="118" height="58" rx="10" fill="#eef4ff" stroke="#2b5fab" stroke-width="2"/>
+<text x="865" y="402" text-anchor="middle">10-05 18:55:20</text>
+<text x="865" y="418" text-anchor="middle">136.1</text>
+<rect x="956" y="491" width="118" height="58" rx="10" fill="#eef4ff" stroke="#2b5fab" stroke-width="2"/>
+<text x="1015" y="512" text-anchor="middle">10-05 19:10:05</text>
+<text x="1015" y="528" text-anchor="middle">603.1</text>
+</svg>
