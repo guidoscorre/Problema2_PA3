@@ -257,28 +257,28 @@ class ArvoreChegadas:
             melhor_no = None
             
                                                                                 # Busca na árvore a chegada da linha a partir daquele momento
-        def buscar_linha_recursivo(no):
-                nonlocal melhor_no
-                if no is None:
-                    return
-                
-                                                                                # 1. Verifica se o nó é um candidato válido no MESMO DIA
-                if no.data == data_busca and no.horario >= horario_busca and no.linha == linha:
-                    if melhor_no is None or no.horario < melhor_no.horario:
-                        melhor_no = no
-                
-                                                                                # 2. Otimização da descida (poda de caminhos)
-                if no.data < data_busca or (no.data == data_busca and no.horario < horario_busca):
-                                                                                # Muito cedo: a resposta só pode estar à direita
-                    buscar_linha_recursivo(no.direita)
-                elif no.data > data_busca:
-                                                                                # Dia seguinte ou futuro: a resposta ficou para trás (esquerda)
-                    buscar_linha_recursivo(no.esquerda)
-                else:
-                                                                                # Dia e horário válidos: olha esquerda (pode ter mais cedo) 
-                                                                                # e direita (se for outra linha)
-                    buscar_linha_recursivo(no.esquerda)
-                    buscar_linha_recursivo(no.direita)
+            def buscar_linha_recursivo(no):
+                    nonlocal melhor_no
+                    if no is None:
+                        return
+                    
+                                                                                    # 1. Verifica se o nó é um candidato válido no MESMO DIA
+                    if no.data == data_busca and no.horario >= horario_busca and no.linha == linha:
+                        if melhor_no is None or no.horario < melhor_no.horario:
+                            melhor_no = no
+                    
+                                                                                    # 2. Otimização da descida (poda de caminhos)
+                    if no.data < data_busca or (no.data == data_busca and no.horario < horario_busca):
+                                                                                    # Muito cedo: a resposta só pode estar à direita
+                        buscar_linha_recursivo(no.direita)
+                    elif no.data > data_busca:
+                                                                                    # Dia seguinte ou futuro: a resposta ficou para trás (esquerda)
+                        buscar_linha_recursivo(no.esquerda)
+                    else:
+                                                                                    # Dia e horário válidos: olha esquerda (pode ter mais cedo) 
+                                                                                    # e direita (se for outra linha)
+                        buscar_linha_recursivo(no.esquerda)
+                        buscar_linha_recursivo(no.direita)
 
             buscar_linha_recursivo(self.raiz)
             
