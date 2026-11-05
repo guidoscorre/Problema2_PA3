@@ -1,4 +1,292 @@
 # ESSE É O CÓDIGO PRINCIPAL, AS ALTERAÇÕES DEVEM SER FEITAS NA BRANCH DEV.
 
+from datetime import datetime, timedelta
 
+
+# AQUI IREMOS FAZER A IMPLEMENTACAO DAS FUNCOES R1 A R8 (DATA COMBINADA PARA ENTREGA - 25/10)
+
+# Arthur Lira - R1, R2 (R7?)
+# Iranetes - R3 e R4
+# Guilherme de Castro - R5, R6 (R8?)
+# Joao Victor - R7 e R8??
+
+
+
+class No:
+    def __init__(self, data, horario, linha):
+                                                              
+        self.data = data
+        self.horario = horario
+        self.linha = linha
+        
+        
+        self.chave = (data, horario, linha) 
+        
+                                                               
+        self.esquerda = None
+        self.direita = None
+
+class ArvoreChegadas:
+    def __init__(self):
+                                                               
+        self.raiz = None
+
+    def registrar_chegada(self, data, horario, linha):      # (R1)
+        nova_chave = (data, horario, linha)
+        
+                                                              
+        if self.raiz is None:
+            self.raiz = No(data, horario, linha)
+            return "OK"
+            
+                                                               
+        atual = self.raiz
+        
+        while True:
+                                                               
+            if nova_chave == atual.chave:
+                return "DUPLICADO"
+                
+            if nova_chave < atual.chave:
+                                                               
+                if atual.esquerda is None:
+                                                                  
+                    atual.esquerda = No(data, horario, linha)
+                    return "OK"
+                                                              
+            else:
+                                                            
+                if atual.direita is None:
+                                                             
+                    atual.direita = No(data, horario, linha)
+                    return "OK"
+                                                            
+                atual = atual.direita
+
+    def buscar_chegada(self, data, horario, linha):             # (R2)
+        chave_busca = (data, horario, linha)
+        atual = self.raiz
+        
+                                                             
+        while atual is not None:
+            if chave_busca == atual.chave:
+                                                           
+                return "ACHOU"
+            elif chave_busca < atual.chave:
+                                                           
+                atual = atual.esquerda
+            else:
+                                                              
+                atual = atual.direita
+                
+                                                              
+        return "NAO"
+
+
+
+    def proximo(self, data, horario):                                       #(R3)
+        atual = self.raiz
+        melhor = None
+        
+        while atual is not None:
+                                                                                   
+            if (atual.data, atual.horario) >= (data, horario):
+                                                                                   
+                melhor = atual
+                                                                                   
+                atual = atual.esquerda
+            else:
+                                                                                    
+                atual = atual.direita
+                
+        if melhor is not None:
+            return f"{melhor.data} {melhor.horario} {melhor.linha}"
+        return "NENHUM"
+
+    def proximo_da_linha(self, data, horario, linha):                     #(R4)
+        melhor = None
+        
+                                                                                               
+        def buscar_linha(no):
+            nonlocal melhor
+            if no is None:
+                return
+            
+                                                                                                
+            if (no.data, no.horario) >= (data, horario) and no.linha == linha:
+                                                                                                
+                if melhor is None or (no.data, no.horario) < (melhor.data, melhor.horario):
+                    melhor = no
+            
+                                                                                               
+            if (no.data, no.horario) < (data, horario):
+                                                                                               
+                buscar_linha(no.direita)
+            else:
+                                                                                                
+                buscar_linha(no.esquerda)
+                buscar_linha(no.direita)
+                
+        buscar_linha(self.raiz)
+        
+        if melhor is not None:
+            return f"{melhor.data} {melhor.horario}"
+        return "NENHUM"
+
+
+
+
+    def entre(self, data1, horario1, data2, horario2):                          # (R5)
+        if (data1, horario1) > (data2, horario2):                              
+            return "0"
+
+        resultados = []
+
+        def in_order(no):
+            if no is None:
+                return
+            
+            instante_no = (no.data, no.horario)
+            instante_inicio = (data1, horario1)
+            instante_fim = (data2, horario2)
+
+            if instante_no >= instante_inicio:                                  
+                in_order(no.esquerda)
+                
+            if instante_inicio <= instante_no <= instante_fim:                  
+                resultados.append(f"{no.data} {no.horario} {no.linha}")
+                
+            if instante_no <= instante_fim:                                    
+                in_order(no.direita)
+
+        in_order(self.raiz)
+
+        resposta = f"{len(resultados)}"                                        
+        for res in resultados:
+            resposta += f"\n{res}"                                             
+            
+        return resposta
+
+    def remover_chegada(self, data, horario, linha):                            # (R6)
+        chave_remocao = (data, horario, linha)
+        
+        def get_minimo(no):                                                    
+            atual = no
+            while atual.esquerda is not None:
+                atual = atual.esquerda
+            return atual
+
+        def remover_recursivo(no, chave):
+            if no is None:
+                return no, False                                               
+                
+            if chave < no.chave:
+                no.esquerda, removido = remover_recursivo(no.esquerda, chave)
+            elif chave > no.chave:
+                no.direita, removido = remover_recursivo(no.direita, chave)
+            else:
+                removido = True                                                 
+                
+                if no.esquerda is None:                                         
+                    return no.direita, removido
+                elif no.direita is None:                                       
+                    return no.esquerda, removido
+                    
+                                                                              
+                sucessor = get_minimo(no.direita)                               
+                
+                no.data = sucessor.data                                        
+                no.horario = sucessor.horario
+                no.linha = sucessor.linha
+                no.chave = sucessor.chave
+                
+                                                                               
+                no.direita, _ = remover_recursivo(no.direita, sucessor.chave)
+                
+            return no, removido
+
+        self.raiz, sucesso = remover_recursivo(self.raiz, chave_remocao)
+        
+        if sucesso:
+            return "OK"
+        else:
+            return "NAO"
+
+
+
+
+    def altura(self):                                                           # (R7)
+        def calcular_altura(no):
+            if no is None:
+                                                                                
+                return 0
+                
+                                                                               
+            altura_esq = calcular_altura(no.esquerda)
+                                                                               
+            altura_dir = calcular_altura(no.direita)
+            
+                                                                                
+            if altura_esq > altura_dir:
+                return altura_esq + 1
+            else:
+                return altura_dir + 1
+                
+        return str(calcular_altura(self.raiz))
+
+
+
+
+    def espera_semanal(self, linha, data, horario, k):                          # (R8)
+        k = int(k)
+                                                                                
+        instante_base = datetime.strptime(f"{data} {horario}", "%Y-%m-%d %H:%M:%S")
+        
+        resultados = []
+        
+                                                                                
+        for semanas_atras in range(k - 1, -1, -1):
+            instante_busca = instante_base - timedelta(weeks=semanas_atras)
+            data_busca = instante_busca.strftime("%Y-%m-%d")
+            horario_busca = instante_busca.strftime("%H:%M:%S")
+            
+            melhor_no = None
+            
+                                                                                
+            def buscar_linha_recursivo(no):
+                    nonlocal melhor_no
+                    if no is None:
+                        return
+                    
+                                                                                   
+                    if no.data == data_busca and no.horario >= horario_busca and no.linha == linha:
+                        if melhor_no is None or no.horario < melhor_no.horario:
+                            melhor_no = no
+                    
+                                                                                    
+                    if no.data < data_busca or (no.data == data_busca and no.horario < horario_busca):
+                                                                                    
+                        buscar_linha_recursivo(no.direita)
+                    elif no.data > data_busca:
+                                                                                    
+                        buscar_linha_recursivo(no.esquerda)
+                    else:
+                                                                                   
+                                                                                   
+                        buscar_linha_recursivo(no.esquerda)
+                        buscar_linha_recursivo(no.direita)
+
+            buscar_linha_recursivo(self.raiz)
+            
+            if melhor_no is not None:
+                                                                               
+                instante_chegada = datetime.strptime(f"{melhor_no.data} {melhor_no.horario}", "%Y-%m-%d %H:%M:%S")
+                espera_segundos = int((instante_chegada - instante_busca).total_seconds())
+                resultados.append(f"{data_busca} {espera_segundos}")
+            else:
+                                                                                
+                resultados.append(f"{data_busca} NAOPASSOU")
+                
+                                                                                
+        return "\n".join(resultados)
 
