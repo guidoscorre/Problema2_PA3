@@ -1,364 +1,602 @@
-from datetime import datetime, timedelta
-import urllib.request
 
+
+import os
+import sys
+import time
+import math
+import argparse
+from datetime import datetime, timedelta
+
+FORMATO_DATA_HORA = "%Y-%m-%d %H:%M:%S"
+
+
+# =====================================================================================
+#                                       NUCLEO
+# =====================================================================================
 
 class No:
+    __slots__ = ("data", "horario", "linha", "chave", "esquerda", "direita")
+
     def __init__(self, data, horario, linha):
-                                                               # Guarda as informações originais do registro
         self.data = data
         self.horario = horario
         self.linha = linha
-        
-                                                               # Cria uma tupla (data, horario, linha) para a chave de ordenação.
-        
-        self.chave = (data, horario, linha) 
-        
-                                                               # Ponteiros para os nós filhos (esquerda = anteriores, direita = posteriores)
+        # Chave = (data, horario, linha). Datas AAAA-MM-DD e horarios HH:MM:SS tem largura fixa,
+        # entao a comparacao de texto equivale a comparacao cronologica; a linha desempata
+        # comparando caractere por caractere, exatamente como o enunciado pede.
+        self.chave = (data, horario, linha)
         self.esquerda = None
         self.direita = None
 
+
 class ArvoreChegadas:
     def __init__(self):
-                                                               # A árvore sempre inicia vazia (sem nenhum nó no topo)
         self.raiz = None
 
-    def registrar_chegada(self, data, horario, linha):      # (R1)
-        nova_chave = (data, horario, linha)
-        
-                                                               # Se a árvore estiver vazia, o novo registro vira a raiz
+    # ---------------------------------------------------------------- R1
+    def registrar_chegada(self, data, horario, linha):
+        chave = (data, horario, linha)
         if self.raiz is None:
             self.raiz = No(data, horario, linha)
             return "OK"
-            
-                                                               # Variável para percorrer a árvore, começando sempre pelo topo (raiz)
+
         atual = self.raiz
-        
         while True:
-                                                               # R1 exige tratamento se a chegada já foi registrada, retornando DUPLICADO
-            if nova_chave == atual.chave:
-                return "DUPLICADO"
-                
-            if nova_chave < atual.chave:
-                                                               # Se a chave for menor, precisamos descer pelo lado esquerdo
+            chave_atual = atual.chave
+            if chave < chave_atual:
                 if atual.esquerda is None:
-                                                                  # Achou um espaço vazio, pendura o novo nó aqui e finaliza
                     atual.esquerda = No(data, horario, linha)
                     return "OK"
-                                                              # Se não estiver vazio, move o foco para o nó da esquerda e repete o laço
                 atual = atual.esquerda
-            else:
-                                                              # Se a chave for maior, precisamos descer pelo lado direito
+            elif chave > chave_atual:
                 if atual.direita is None:
-                                                              # Achou um espaço vazio, pendura o novo nó aqui e finaliza
                     atual.direita = No(data, horario, linha)
                     return "OK"
-                                                              # Se não estiver vazio, move o foco para o nó da direita e repete o laço
                 atual = atual.direita
-
-    def buscar_chegada(self, data, horario, linha):             # (R2)
-        chave_busca = (data, horario, linha)
-        atual = self.raiz
-        
-                                                              # Percorre a árvore enquanto houver nós pelo caminho
-        while atual is not None:
-            if chave_busca == atual.chave:
-                                                               # Encontrou o registro exato
-                return "ACHOU"
-            elif chave_busca < atual.chave:
-                                                               # A chave buscada é menor, então ignora a direita e desce pela esquerda
-                atual = atual.esquerda
             else:
-                                                               # A chave buscada é maior, então ignora a esquerda e desce pela direita
-                atual = atual.direita
-                
-                                                                # O laço terminou e encontrou um espaço vazio (None), logo o registro não existe
+                return "DUPLICADO"
+
+    # ---------------------------------------------------------------- R2
+    def buscar_chegada(self, data, horario, linha):
+        chave = (data, horario, linha)
+        atual = self.raiz
+        while atual is not None:
+            chave_atual = atual.chave
+            if chave == chave_atual:
+                return "ACHOU"
+            atual = atual.esquerda if chave < chave_atual else atual.direita
         return "NAO"
 
-
-
-    def proximo(self, data, horario):                                       #(R3)
+    # ---------------------------------------------------------------- R3
+    def proximo(self, data, horario):
+        alvo = (data, horario)
         atual = self.raiz
         melhor = None
-        
         while atual is not None:
-                                                                                    # Comparamos apenas data e horário usando tuplas
-            if (atual.data, atual.horario) >= (data, horario):
-                                                                                    # Este nó é um candidato válido. Guardamos ele.
-                melhor = atual
-                                                                                    # Como queremos o PRIMEIRO a partir do instante, 
-                                                                                    # descemos para a esquerda para tentar achar um ainda mais cedo.
+            if (atual.data, atual.horario) >= alvo:
+                melhor = atual          # candidato; tenta achar um ainda mais cedo na esquerda
                 atual = atual.esquerda
             else:
-                                                                                    # Se o nó atual é de um instante anterior ao que buscamos,
-                                                                                    # a resposta só pode estar na subárvore da direita.
-                atual = atual.direita
-                
-        if melhor is not None:
-            return f"{melhor.data} {melhor.horario} {melhor.linha}"
-        return "NENHUM"
+                atual = atual.direita   # instante anterior ao buscado: so a direita serve
+        if melhor is None:
+            return "NENHUM"
+        return f"{melhor.data} {melhor.horario} {melhor.linha}"
 
-    def proximo_da_linha(self, data, horario, linha):                     #(R4)
+    # ---------------------------------------------------------------- R4 (Fase 1: solucao simples)
+    def _primeiro_da_linha(self, data, horario, linha):
+        """Devolve o No da primeira chegada da linha a partir do instante (ou None).
+        Fase 1: varre a propria arvore (poda so pelo instante), custo O(n) no pior caso."""
+        if self.raiz is None:
+            return None
+        alvo = (data, horario)
         melhor = None
-        
-                                                                                                # O enunciado diz que para R4 na Fase 1 basta a solução mais simples na própria árvore.
-                                                                                                # Usamos uma função recursiva que varre os caminhos possíveis.
-        def buscar_linha(no):
-            nonlocal melhor
-            if no is None:
-                return
-            
-                                                                                                # Se o nó atende à data/hora e é da linha exata
-            if (no.data, no.horario) >= (data, horario) and no.linha == linha:
-                                                                                                # Guarda se for o primeiro encontrado ou se for mais cedo que o guardado anteriormente
-                if melhor is None or (no.data, no.horario) < (melhor.data, melhor.horario):
+        melhor_inst = None
+        pilha = [self.raiz]
+        while pilha:
+            no = pilha.pop()
+            inst = (no.data, no.horario)
+            if inst >= alvo:
+                if no.linha == linha and (melhor is None or inst < melhor_inst):
                     melhor = no
-            
-                                                                                                # Otimização da busca:
-            if (no.data, no.horario) < (data, horario):
-                                                                                                # Se o nó aconteceu antes do horário buscado, ignoramos a esquerda inteira
-                buscar_linha(no.direita)
-            else:
-                                                                                                # Se aconteceu depois, temos que olhar a esquerda (pode ter um mais cedo)
-                                                                                                # e a direita (caso o nó atual não seja da linha certa e a linha certa esteja lá)
-                buscar_linha(no.esquerda)
-                buscar_linha(no.direita)
-                
-        buscar_linha(self.raiz)
-        
-        if melhor is not None:
-            return f"{melhor.data} {melhor.horario}"
-        return "NENHUM"
+                    melhor_inst = inst
+                if no.esquerda is not None:
+                    pilha.append(no.esquerda)
+            # a direita so tem instantes >= inst; se ja ha melhor <= inst, nao pode melhorar
+            if no.direita is not None and (melhor is None or inst < melhor_inst):
+                pilha.append(no.direita)
+        return melhor
 
+    def proximo_da_linha(self, data, horario, linha):
+        no = self._primeiro_da_linha(data, horario, linha)
+        if no is None:
+            return "NENHUM"
+        return f"{no.data} {no.horario}"
 
-
-
-    def entre(self, data1, horario1, data2, horario2):                          # (R5)
-        if (data1, horario1) > (data2, horario2):                               # Se o primeiro instante for posterior, responde 0
+    # ---------------------------------------------------------------- R5
+    def entre(self, data1, horario1, data2, horario2):
+        inicio = (data1, horario1)
+        fim = (data2, horario2)
+        if inicio > fim:
             return "0"
 
         resultados = []
+        pilha = []
+        atual = self.raiz
+        while True:
+            # desce pela esquerda, pulando subarvores inteiras anteriores ao inicio
+            while atual is not None:
+                if (atual.data, atual.horario) >= inicio:
+                    pilha.append(atual)
+                    atual = atual.esquerda
+                else:
+                    atual = atual.direita
+            if not pilha:
+                break
+            no = pilha.pop()
+            if (no.data, no.horario) > fim:
+                break                    # em ordem: tudo dai pra frente e posterior ao fim
+            resultados.append(f"{no.data} {no.horario} {no.linha}")
+            atual = no.direita
 
-        def in_order(no):
-            if no is None:
-                return
-            
-            instante_no = (no.data, no.horario)
-            instante_inicio = (data1, horario1)
-            instante_fim = (data2, horario2)
+        return "\n".join([str(len(resultados))] + resultados)
 
-            if instante_no >= instante_inicio:                                  # Se pode haver algo no limite ou antes, desce esquerda
-                in_order(no.esquerda)
-                
-            if instante_inicio <= instante_no <= instante_fim:                  # Se o nó está dentro do intervalo, guarda ele
-                resultados.append(f"{no.data} {no.horario} {no.linha}")
-                
-            if instante_no <= instante_fim:                                     # Se pode haver algo no limite ou depois, desce direita
-                in_order(no.direita)
-
-        in_order(self.raiz)
-
-        resposta = f"{len(resultados)}"                                         # O formato exige primeiro a quantidade k
-        for res in resultados:
-            resposta += f"\n{res}"                                              # Depois, as k linhas no formato data hora linha
-            
-        return resposta
-
-    def remover_chegada(self, data, horario, linha):                            # (R6)
-        chave_remocao = (data, horario, linha)
-        
-        def get_minimo(no):                                                     # Função auxiliar para achar o sucessor
-            atual = no
-            while atual.esquerda is not None:
-                atual = atual.esquerda
-            return atual
-
-        def remover_recursivo(no, chave):
-            if no is None:
-                return no, False                                                # Chegou no fim e não achou
-                
-            if chave < no.chave:
-                no.esquerda, removido = remover_recursivo(no.esquerda, chave)
-            elif chave > no.chave:
-                no.direita, removido = remover_recursivo(no.direita, chave)
-            else:
-                removido = True                                                 # Achamos o registro para apagar!
-                
-                if no.esquerda is None:                                         # Casos 1 e 2: Nó sem filho na esquerda
-                    return no.direita, removido
-                elif no.direita is None:                                        # Caso 2: Nó sem filho na direita
-                    return no.esquerda, removido
-                    
-                                                                                # Caso 3: Nó tem dois filhos. Regra do sucessor
-                sucessor = get_minimo(no.direita)                               # Pega o menor nó da direita
-                
-                no.data = sucessor.data                                         # Copia os dados do sucessor para cá
-                no.horario = sucessor.horario
-                no.linha = sucessor.linha
-                no.chave = sucessor.chave
-                
-                                                                                # Agora manda remover o sucessor lá de baixo
-                no.direita, _ = remover_recursivo(no.direita, sucessor.chave)
-                
-            return no, removido
-
-        self.raiz, sucesso = remover_recursivo(self.raiz, chave_remocao)
-        
-        if sucesso:
-            return "OK"
-        else:
+    # ---------------------------------------------------------------- R6
+    def remover_chegada(self, data, horario, linha):
+        chave = (data, horario, linha)
+        pai = None
+        atual = self.raiz
+        while atual is not None and atual.chave != chave:
+            pai = atual
+            atual = atual.esquerda if chave < atual.chave else atual.direita
+        if atual is None:
             return "NAO"
 
-
-
-
-    def altura(self):                                                           # (R7)
-        def calcular_altura(no):
-            if no is None:
-                                                                                # O chão da árvore (vazio) tem altura 0
-                return 0
-                
-                                                                                # Pergunta a altura da perna esquerda
-            altura_esq = calcular_altura(no.esquerda)
-                                                                                # Pergunta a altura da perna direita
-            altura_dir = calcular_altura(no.direita)
-            
-                                                                                # Pega o maior caminho e soma 1 (o próprio nó)
-            if altura_esq > altura_dir:
-                return altura_esq + 1
+        if atual.esquerda is not None and atual.direita is not None:
+            # Dois filhos: substitui pelo sucessor (menor no da subarvore da direita)
+            pai_suc = atual
+            suc = atual.direita
+            while suc.esquerda is not None:
+                pai_suc = suc
+                suc = suc.esquerda
+            atual.data = suc.data
+            atual.horario = suc.horario
+            atual.linha = suc.linha
+            atual.chave = suc.chave
+            if pai_suc is atual:
+                pai_suc.direita = suc.direita
             else:
-                return altura_dir + 1
-                
-        return str(calcular_altura(self.raiz))
+                pai_suc.esquerda = suc.direita
+            return "OK"
 
+        filho = atual.esquerda if atual.esquerda is not None else atual.direita
+        if pai is None:
+            self.raiz = filho
+        elif pai.esquerda is atual:
+            pai.esquerda = filho
+        else:
+            pai.direita = filho
+        return "OK"
 
+    # ---------------------------------------------------------------- R7
+    def altura(self):
+        """Vazia = 0, um unico no = 1. Iterativo (pilha de (no, profundidade))."""
+        if self.raiz is None:
+            return 0
+        maior = 0
+        pilha = [(self.raiz, 1)]
+        while pilha:
+            no, prof = pilha.pop()
+            if prof > maior:
+                maior = prof
+            if no.esquerda is not None:
+                pilha.append((no.esquerda, prof + 1))
+            if no.direita is not None:
+                pilha.append((no.direita, prof + 1))
+        return maior
 
+    def tamanho(self):
+        """Numero de nos (usado so nas medicoes)."""
+        if self.raiz is None:
+            return 0
+        total = 0
+        pilha = [self.raiz]
+        while pilha:
+            no = pilha.pop()
+            total += 1
+            if no.esquerda is not None:
+                pilha.append(no.esquerda)
+            if no.direita is not None:
+                pilha.append(no.direita)
+        return total
 
-    def espera_semanal(self, linha, data, horario, k):                          # (R8)
+    # ---------------------------------------------------------------- R8 
+    def espera_semanal(self, linha, data, horario, k):
         k = int(k)
-                                                                                # O enunciado permite usar a biblioteca de datas no núcleo
-        instante_base = datetime.strptime(f"{data} {horario}", "%Y-%m-%d %H:%M:%S")
-        
-        resultados = []
-        
-                                                                                # Retrocede semana a semana, da mais antiga (k-1) até a atual (0)
-        for semanas_atras in range(k - 1, -1, -1):
-            instante_busca = instante_base - timedelta(weeks=semanas_atras)
-            data_busca = instante_busca.strftime("%Y-%m-%d")
-            horario_busca = instante_busca.strftime("%H:%M:%S")
-            
-            melhor_no = None
-            
-                                                                                # Busca na árvore a chegada da linha a partir daquele momento
-        def buscar_linha_recursivo(no):
-                nonlocal melhor_no
-                if no is None:
-                    return
-                
-                                                                                # 1. Verifica se o nó é um candidato válido no MESMO DIA
-                if no.data == data_busca and no.horario >= horario_busca and no.linha == linha:
-                    if melhor_no is None or no.horario < melhor_no.horario:
-                        melhor_no = no
-                
-                                                                                # 2. Otimização da descida (poda de caminhos)
-                if no.data < data_busca or (no.data == data_busca and no.horario < horario_busca):
-                                                                                # Muito cedo: a resposta só pode estar à direita
-                    buscar_linha_recursivo(no.direita)
-                elif no.data > data_busca:
-                                                                                # Dia seguinte ou futuro: a resposta ficou para trás (esquerda)
-                    buscar_linha_recursivo(no.esquerda)
-                else:
-                                                                                # Dia e horário válidos: olha esquerda (pode ter mais cedo) 
-                                                                                # e direita (se for outra linha)
-                    buscar_linha_recursivo(no.esquerda)
-                    buscar_linha_recursivo(no.direita)
-
-            buscar_linha_recursivo(self.raiz)
-            
-            if melhor_no is not None:
-                                                                                # Calcula a espera em segundos
-                instante_chegada = datetime.strptime(f"{melhor_no.data} {melhor_no.horario}", "%Y-%m-%d %H:%M:%S")
-                espera_segundos = int((instante_chegada - instante_busca).total_seconds())
-                resultados.append(f"{data_busca} {espera_segundos}")
+        base = datetime.strptime(f"{data} {horario}", FORMATO_DATA_HORA)
+        saida = []
+        for semanas_atras in range(k - 1, -1, -1):          # da mais antiga ate a data informada
+            instante = base - timedelta(weeks=semanas_atras)
+            d = instante.strftime("%Y-%m-%d")
+            h = instante.strftime("%H:%M:%S")
+            no = self._primeiro_da_linha(d, h, linha)
+            if no is not None and no.data == d:             # tem que ser no MESMO dia
+                chegada = datetime.strptime(f"{no.data} {no.horario}", FORMATO_DATA_HORA)
+                espera = int((chegada - instante).total_seconds())
+                saida.append(f"{d} {espera}")
             else:
-                                                                                # Tratamento quando a linha não passou mais naquele dia
-                resultados.append(f"{data_busca} NAOPASSOU")
-                
-                                                                                # Junta as k linhas com quebra de linha
-        return "\n".join(resultados)
+                saida.append(f"{d} NAOPASSOU")
+        return "\n".join(saida)
 
-def executar_testes_via_github(url_teste, url_gabarito):                       #--------------------tester-------------------------------
-    arvore = ArvoreChegadas()
-    
-    print(f"Puxando arquivo de teste: {url_teste.split('/')[-1]}...")
-    
-    resposta_teste = urllib.request.urlopen(url_teste)
-    linhas_teste = resposta_teste.read().decode('utf-8').splitlines()
-    
-    saidas_obtidas = []
-    
-    for linha in linhas_teste:
-        # IGNORA LINHAS EM BRANCO E COMENTÁRIOS QUE COMEÇAM COM #
-        if not linha.strip() or linha.strip().startswith('#'):
-            continue
-            
-        dados = linha.strip().split()
-        comando = dados[0].upper()
-        
-        # Mapeamento atualizado para os comandos do arquivo pequeno_2.txt
+
+# =====================================================================================
+#                                       TESTER
+# =====================================================================================
+
+def executar_operacao(arvore, comando, a):
+    """Despacha uma operacao. Devolve a resposta (str) ou None se a linha for invalida."""
+    try:
         if comando == "REG":
-            resultado = arvore.registrar_chegada(dados[1], dados[2], dados[3])
-            saidas_obtidas.append(resultado)
-            
-        elif comando == "BUSCA":
-            resultado = arvore.buscar_chegada(dados[1], dados[2], dados[3])
-            saidas_obtidas.append(resultado)
-            
-        elif comando == "PROX":
-            resultado = arvore.proximo(dados[1], dados[2])
-            saidas_obtidas.append(resultado)
-            
-        elif comando == "PROXL":
-            resultado = arvore.proximo_da_linha(dados[1], dados[2], dados[3])
-            saidas_obtidas.append(resultado)
-            
-        elif comando == "ENTRE":
-            resultado = arvore.entre(dados[1], dados[2], dados[3], dados[4])
-            saidas_obtidas.append(resultado)
-            
-        elif comando == "REM":
-            resultado = arvore.remover_chegada(dados[1], dados[2], dados[3])
-            saidas_obtidas.append(resultado)
-            
-        elif comando == "ALT":
-            resultado = arvore.altura()
-            saidas_obtidas.append(resultado)
-            
-        elif comando == "SEMANA":
-            # O arquivo passa: SEMANA linha data horario k
-            resultado = arvore.espera_semanal(dados[1], dados[2], dados[3], dados[4])
-            saidas_obtidas.append(resultado)
-            
-    # Junta todas as respostas geradas pelos métodos com quebra de linha
-    resultado_da_sua_arvore = "\n".join(saidas_obtidas).strip()
-    
-    resposta_gabarito = urllib.request.urlopen(url_gabarito)
-    resultado_esperado = resposta_gabarito.read().decode('utf-8').strip()
-    
-    if resultado_da_sua_arvore == resultado_esperado:
-        print("SUCESSO! A saída da árvore é idêntica ao gabarito.")
-    else:
-        print("FALHA! A saída da árvore está diferente do esperado.")
-        print("\n--- O que sua árvore gerou ---")
-        print(resultado_da_sua_arvore)
-        print("\n--- O que era esperado ---")
-        print(resultado_esperado)
+            return arvore.registrar_chegada(a[0], a[1], a[2])
+        if comando == "BUSCA":
+            return arvore.buscar_chegada(a[0], a[1], a[2])
+        if comando == "PROX":
+            return arvore.proximo(a[0], a[1])
+        if comando == "PROXL":
+            return arvore.proximo_da_linha(a[0], a[1], a[2])
+        if comando == "ENTRE":
+            return arvore.entre(a[0], a[1], a[2], a[3])
+        if comando == "REM":
+            return arvore.remover_chegada(a[0], a[1], a[2])
+        if comando == "ALT":
+            return str(arvore.altura())
+        if comando == "SEMANA":
+            return arvore.espera_semanal(a[0], a[1], a[2], a[3])
+    except IndexError:
+        return None
+    return None
+
+
+def carregar_operacoes(caminho):
+    """Le o arquivo inteiro ANTES de executar. Ignora linhas em branco e iniciadas por #."""
+    ops = []
+    with open(caminho, "r", encoding="utf-8-sig") as f:
+        for bruta in f:
+            linha = bruta.strip()
+            if not linha or linha.startswith("#"):
+                continue
+            partes = linha.split()
+            ops.append((partes[0].upper(), partes[1:]))
+    return ops
+
+
+def executar_operacoes(arvore, ops):
+    """Executa as operacoes e mede SO o tempo delas. Devolve (respostas, tempo_ms)."""
+    respostas = []
+    adicionar = respostas.append
+    inicio = time.perf_counter()
+    for comando, args in ops:
+        r = executar_operacao(arvore, comando, args)
+        if r is not None:
+            adicionar(r)
+    tempo_ms = (time.perf_counter() - inicio) * 1000.0
+    return respostas, tempo_ms
+
+
+# --------------------------------------------------------------------- modo oficial
+def modo_executar(caminho):
+    ops = carregar_operacoes(caminho)
+    arvore = ArvoreChegadas()
+    respostas, tempo_ms = executar_operacoes(arvore, ops)
+    sys.stdout.write("\n".join(respostas) + ("\n" if respostas else ""))
+    sys.stdout.flush()
+    sys.stderr.write(f"TEMPO_MS {tempo_ms:.3f}\n")
+    return 0
+
+
+# --------------------------------------------------------------------- utilidades de pasta
+def _candidatos_pasta():
+    aqui = os.path.dirname(os.path.abspath(__file__))
+    cwd = os.getcwd()
+    nomes = ["dados_teste", "dados", "cargas", "carga"]
+    for base in (aqui, cwd, os.path.dirname(aqui)):
+        for n in nomes:
+            yield os.path.join(base, n)
+    yield aqui
+    yield cwd
+    yield os.path.dirname(aqui)
+
+
+def localizar_pasta_dados(pasta_informada=None):
+    if pasta_informada:
+        return pasta_informada
+    for p in _candidatos_pasta():
+        if os.path.isdir(p):
+            for _, _, arquivos in os.walk(p):
+                if any(a.lower().endswith(".txt") for a in arquivos):
+                    return p
+    return os.getcwd()
+
+
+def localizar_arquivo(pasta, nome):
+    for raiz, dirs, arquivos in os.walk(pasta):
+        dirs[:] = [d for d in dirs if d != ".git"]
+        for a in arquivos:
+            if a.lower() == nome.lower():
+                return os.path.join(raiz, a)
+    return None
+
+
+# --------------------------------------------------------------------- validacao (arquivo pequeno)
+def modo_validar(pasta, arquivo_ops=None, arquivo_esperado=None):
+    pasta = localizar_pasta_dados(pasta)
+    arquivo_ops = arquivo_ops or localizar_arquivo(pasta, "pequeno.txt")
+    arquivo_esperado = arquivo_esperado or localizar_arquivo(pasta, "pequeno_esperado_fase1.txt")
+    if not arquivo_ops or not arquivo_esperado:
+        print(f"[ERRO] Nao achei pequeno.txt / pequeno_esperado_fase1.txt em: {pasta}")
+        print("       Use --pasta CAMINHO ou --ops ARQ --esperado ARQ.")
+        return 2
+
+    print(f"Operacoes : {arquivo_ops}")
+    print(f"Esperado  : {arquivo_esperado}")
+    ops = carregar_operacoes(arquivo_ops)
+    respostas, tempo_ms = executar_operacoes(ArvoreChegadas(), ops)
+    obtido = "\n".join(respostas).splitlines()
+
+    with open(arquivo_esperado, "r", encoding="utf-8-sig") as f:
+        esperado = f.read().splitlines()
+
+    obtido = [l.rstrip() for l in obtido]
+    esperado = [l.rstrip() for l in esperado]
+    while esperado and not esperado[-1]:
+        esperado.pop()
+
+    diferencas = []
+    for i in range(max(len(obtido), len(esperado))):
+        o = obtido[i] if i < len(obtido) else "<faltando>"
+        e = esperado[i] if i < len(esperado) else "<faltando>"
+        if o != e:
+            diferencas.append((i + 1, o, e))
+
+    print(f"Tempo das operacoes: {tempo_ms:.3f} ms | linhas obtidas: {len(obtido)} | esperadas: {len(esperado)}")
+    if not diferencas:
+        print("SUCESSO! A saida da arvore e identica ao gabarito da Fase 1.")
+        return 0
+    print(f"FALHA! {len(diferencas)} linha(s) diferente(s). Primeiras 15:")
+    print(f"{'linha':>6} | {'obtido':<30} | esperado")
+    for n, o, e in diferencas[:15]:
+        print(f"{n:>6} | {o:<30} | {e}")
+    return 1
+
+
+# --------------------------------------------------------------------- Fase 2
+PALAVRAS_EMBARALHADA = ("embaralh", "aleat", "shuffle", "random", "backup", "fora")
+PALAVRAS_ORDEM = ("ordem", "quase", "ordenad", "sorted", "order", "seq")
+
+
+def classificar_versao(nome, ops):
+    n = nome.lower()
+    if any(p in n for p in PALAVRAS_EMBARALHADA):
+        return "embaralhada"
+    if any(p in n for p in PALAVRAS_ORDEM):
+        return "quase em ordem"
+    # sem pista no nome: mede a desordem (fracao de chaves consecutivas que "voltam")
+    quedas = 0
+    anterior = None
+    for _, a in ops:
+        chave = (a[0], a[1], a[2])
+        if anterior is not None and chave < anterior:
+            quedas += 1
+        anterior = chave
+    return "embaralhada" if quedas > 0.25 * max(1, len(ops) - 1) else "quase em ordem"
+
+
+def descobrir_cargas(pasta):
+    """Acha arquivos que so tem REG (cargas da Fase 2)."""
+    cargas = []
+    for raiz, dirs, arquivos in os.walk(pasta):
+        dirs[:] = [d for d in dirs if d not in (".git", "resultados", "__pycache__")]
+        for nome in sorted(arquivos):
+            if not nome.lower().endswith(".txt") or "esperado" in nome.lower():
+                continue
+            caminho = os.path.join(raiz, nome)
+            try:
+                ops = carregar_operacoes(caminho)
+            except (OSError, UnicodeDecodeError):
+                continue
+            if len(ops) >= 500 and all(c == "REG" and len(a) >= 3 for c, a in ops):
+                cargas.append({
+                    "nome": nome, "caminho": caminho, "ops": ops, "n": len(ops),
+                    "versao": classificar_versao(nome, ops),
+                })
+    cargas.sort(key=lambda c: (c["n"], c["versao"]))
+    return cargas
+
+
+def mediana(valores):
+    v = sorted(valores)
+    m = len(v) // 2
+    return v[m] if len(v) % 2 else (v[m - 1] + v[m]) / 2.0
+
+
+def medir_memoria_kib(ops):
+    import tracemalloc
+    arvore = ArvoreChegadas()
+    tracemalloc.start()
+    for _, a in ops:
+        arvore.registrar_chegada(a[0], a[1], a[2])
+    atual, pico = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    return atual / 1024.0, pico / 1024.0
+
+
+def limite_avl(n):
+    return 1.45 * math.log2(n + 2)
+
+
+def modo_fase2(pasta, execucoes, com_memoria, saida):
+    pasta = localizar_pasta_dados(pasta)
+    print(f"Pasta de dados: {pasta}")
+    cargas = descobrir_cargas(pasta)
+    if not cargas:
+        print("[ERRO] Nenhum arquivo de carga (so com REG) encontrado. Use --pasta CAMINHO.")
+        return 2
+
+    print("Cargas encontradas (confira a classificacao!):")
+    for c in cargas:
+        print(f"  {c['nome']:<40} N={c['n']:<6} -> {c['versao']}")
+    print(f"\nExecucoes por arquivo: {execucoes} (mediana). Cargas em ordem degeneram a arvore: pode demorar.\n")
+
+    linhas = []
+    for c in cargas:
+        tempos, altura, nos, falha, duplicados = [], None, None, None, 0
+        for r in range(execucoes):
+            arvore = ArvoreChegadas()
+            try:
+                respostas, t = executar_operacoes(arvore, c["ops"])
+            except Exception as e:                      # item (c) do relatorio: falhas
+                falha = f"{type(e).__name__}: {e}"
+                break
+            tempos.append(t)
+            duplicados = sum(1 for x in respostas if x == "DUPLICADO")
+            print(f"  {c['nome']:<40} execucao {r + 1}/{execucoes}: {t:,.3f} ms")
+        if falha:
+            print(f"  [FALHA] {c['nome']}: {falha}")
+            linhas.append({**{k: c[k] for k in ("nome", "n", "versao")}, "falha": falha})
+            continue
+        altura = arvore.altura()
+        nos = arvore.tamanho()
+        linha = {
+            "nome": c["nome"], "n": c["n"], "versao": c["versao"],
+            "mediana": mediana(tempos), "minimo": min(tempos), "maximo": max(tempos),
+            "altura": altura, "nos": nos, "limite": limite_avl(nos), "duplicados": duplicados,
+            "falha": None,
+        }
+        if com_memoria:
+            atual, pico = medir_memoria_kib(c["ops"])
+            linha["mem_kib"] = atual
+            linha["mem_pico_kib"] = pico
+        linhas.append(linha)
+        print(f"  -> mediana {linha['mediana']:,.3f} ms | altura {altura} | nos {nos}\n")
+
+    os.makedirs(saida, exist_ok=True)
+    ok = [l for l in linhas if not l["falha"]]
+
+    # ---------------- tabela (markdown + csv)
+    cab = ["Arquivo", "N", "Versao", "Mediana (ms)", "Min (ms)", "Max (ms)", "Altura", "Nos",
+           "Limite AVL 1,45*log2(n+2)"]
+    if com_memoria:
+        cab += ["Memoria final (KiB)", "Pico (KiB)"]
+    md = ["**Tabela 1 - Fase 2: arvore binaria de busca sem balanceamento. Tempos em milissegundos "
+          f"(mediana de {execucoes} execucoes; so as operacoes, sem leitura de arquivo) e altura em numero "
+          "de niveis. Mostra como a altura, e nao so N, determina o tempo.**", "",
+          "| " + " | ".join(cab) + " |", "|" + "|".join(["---"] * len(cab)) + "|"]
+    csv = [";".join(cab)]
+    for l in linhas:
+        if l["falha"]:
+            md.append(f"| {l['nome']} | {l['n']} | {l['versao']} | FALHOU: {l['falha']} |" + " |" * (len(cab) - 4))
+            csv.append(";".join([l["nome"], str(l["n"]), l["versao"], "FALHOU " + l["falha"]]))
+            continue
+        cel = [l["nome"], str(l["n"]), l["versao"], f"{l['mediana']:.3f}", f"{l['minimo']:.3f}",
+               f"{l['maximo']:.3f}", str(l["altura"]), str(l["nos"]), f"{l['limite']:.2f}"]
+        if com_memoria:
+            cel += [f"{l['mem_kib']:.1f}", f"{l['mem_pico_kib']:.1f}"]
+        md.append("| " + " | ".join(cel) + " |")
+        csv.append(";".join(cel))
+
+    # ---------------- razoes (pergunta (a))
+    texto_razoes = ["", "**Razoes entre o menor e o maior N (pergunta (a) da Fase 2)**", ""]
+    for versao in ("quase em ordem", "embaralhada"):
+        grupo = [l for l in ok if l["versao"] == versao]
+        if len(grupo) >= 2:
+            ini, fim = grupo[0], grupo[-1]
+            rn = fim["n"] / ini["n"]
+            rt = fim["mediana"] / ini["mediana"] if ini["mediana"] > 0 else float("nan")
+            rh = fim["altura"] / ini["altura"]
+            quad = rn * rn
+            nlogn = (fim["n"] * math.log2(fim["n"])) / (ini["n"] * math.log2(ini["n"]))
+            texto_razoes.append(
+                f"- {versao}: N de {ini['n']} para {fim['n']} (x{rn:.0f}); tempo x{rt:.1f}; altura "
+                f"{ini['altura']} -> {fim['altura']} (x{rh:.1f}). Referencias teoricas: N^2 = x{quad:.0f}, "
+                f"N*log2(N) = x{nlogn:.1f}.")
+    md += texto_razoes
+
+    caminho_md = os.path.join(saida, "fase2_tabela.md")
+    caminho_csv = os.path.join(saida, "fase2_tabela.csv")
+    with open(caminho_md, "w", encoding="utf-8") as f:
+        f.write("\n".join(md) + "\n")
+    with open(caminho_csv, "w", encoding="utf-8-sig") as f:
+        f.write("\n".join(csv) + "\n")
+
+    print("\n" + "\n".join(md))
+    print(f"\nArquivos gerados: {caminho_md} | {caminho_csv}")
+
+    gerar_grafico(ok, saida)
+    if any(l["falha"] for l in linhas):
+        return 1
+    return 0
+
+
+def gerar_grafico(ok, saida):
+    """Grafico opcional (so se matplotlib estiver instalado)."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        print("(matplotlib nao instalado: grafico ignorado, tabelas ja foram geradas)")
+        return
+    fig, eixos = plt.subplots(1, 2, figsize=(11, 4))
+    for versao, marcador in (("quase em ordem", "o"), ("embaralhada", "s")):
+        g = [l for l in ok if l["versao"] == versao]
+        if not g:
+            continue
+        eixos[0].plot([l["n"] for l in g], [l["mediana"] for l in g], marker=marcador, label=versao)
+        eixos[1].plot([l["n"] for l in g], [l["altura"] for l in g], marker=marcador, label=versao)
+    eixos[0].set_title("Tempo (mediana)")
+    eixos[0].set_xlabel("N")
+    eixos[0].set_ylabel("ms")
+    eixos[0].set_yscale("log")
+    eixos[1].set_title("Altura final")
+    eixos[1].set_xlabel("N")
+    eixos[1].set_ylabel("niveis")
+    eixos[1].set_yscale("log")
+    for e in eixos:
+        e.legend()
+        e.grid(True, alpha=0.3)
+    fig.suptitle("Fase 2 - BST sem balanceamento")
+    fig.tight_layout()
+    caminho = os.path.join(saida, "fase2_grafico.png")
+    fig.savefig(caminho, dpi=150)
+    print(f"Grafico: {caminho}")
+
+
+# --------------------------------------------------------------------- main
+def main():
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+    p = argparse.ArgumentParser(description="Problema 2 - arvore de chegadas de onibus (Fase 1)")
+    p.add_argument("arquivo", nargs="?", help="arquivo de operacoes (modo oficial)")
+    p.add_argument("--validar", action="store_true", help="compara pequeno.txt com o gabarito da Fase 1")
+    p.add_argument("--fase2", action="store_true", help="benchmark da Fase 2")
+    p.add_argument("--pasta", help="pasta com os arquivos de teste/carga (padrao: auto)")
+    p.add_argument("--ops", help="(validar) arquivo de operacoes")
+    p.add_argument("--esperado", help="(validar) arquivo com as respostas esperadas")
+    p.add_argument("--execucoes", type=int, default=5, help="(fase2) execucoes por arquivo (padrao 5)")
+    p.add_argument("--memoria", action="store_true", help="(fase2) mede memoria com tracemalloc")
+    p.add_argument("--saida", default="resultados", help="(fase2) pasta de saida (padrao: resultados)")
+    args = p.parse_args()
+
+    if args.validar:
+        return modo_validar(args.pasta, args.ops, args.esperado)
+    if args.fase2:
+        return modo_fase2(args.pasta, args.execucoes, args.memoria, args.saida)
+    if args.arquivo:
+        return modo_executar(args.arquivo)
+    p.print_help()
+    return 0
 
 
 if __name__ == "__main__":
-    # ATENÇÃO: Se no GitHub o arquivo ficou salvo como "pequeno_2.txt", atualize o final do link abaixo
-    link_teste = "https://raw.githubusercontent.com/arthurlira-hub/Problema2_PA3/Tester/dados_teste/pequeno.txt" 
-    link_gabarito_fase1 = "https://raw.githubusercontent.com/arthurlira-hub/Problema2_PA3/Tester/dados_teste/pequeno_esperado_fase1.txt"
-    link_gabarito_fase3 = "https://raw.githubusercontent.com/arthurlira-hub/Problema2_PA3/Tester/dados_teste/pequeno_esperado_fase3.txt"
-    
-    print("--- INICIANDO VALIDAÇÃO FASE 1 ---")
-    executar_testes_via_github(link_teste, link_gabarito_fase1)
+    sys.exit(main())
