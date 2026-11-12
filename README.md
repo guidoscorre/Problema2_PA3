@@ -1,7 +1,7 @@
 # Problema 2 – A que horas passa o próximo ônibus?
 
 Projeto Aplicado 3 – UnDF.
-Grupo: Arthur Ornellas Lira
+Grupo: Arthur Ornellas Lira, Guilherme de Castro e Iranetes Lopes
 
 O sistema guarda cada chegada de ônibus informada (data, horário e linha) e responde às operações R1 a R8.
 A Fase 1 usa uma árvore binária de busca (BST); a Fase 3 usa uma árvore AVL.
@@ -55,7 +55,7 @@ Cada arquivo de carga é executado 5 vezes e a tabela mostra a mediana.
 | Tabela comparativa Fase 1 x Fase 3 (tempo, altura e memória) e verificação do limite 1,45 × log₂(n + 2) | `python medicoes_fase3.py --pasta dados_teste` | `resultados_fase3.md` e `.csv` |
 | Rotações que a AVL faz ao processar o `pequeno.txt` (ilustração) | `python medicoes_fase3.py --rotacoes dados_teste/pequeno.txt` | só na tela |
 | Custo de R4 e R8 conforme os registros crescem (item 3.2) | python experimento_r4_r8.py dados_teste/carga_embaralhada_20000.txt | só na tela |
-| Árvore da Fase 1 após as 7 primeiras chegadas (ilustração) | **[PREENCHER: como foram geradas as `.svg`]** | `arvore_7_*.svg` |
+| Árvore da Fase 1 após as 7 primeiras chegadas (ilustração) |As figuras do relatório foram desenhadas no draw.io(https://app.diagrams.net) e exportadas em formato SVG| `arvore_7_*.svg` |
 
 Os tempos mudam um pouco de máquina para máquina; as alturas e as respostas são sempre as mesmas.
 
