@@ -193,7 +193,7 @@ class ArvoreChegadas:
 
 def ler_operacoes(caminho):
     operacoes = []
-    with open(caminho, encoding="utf-8") as arquivo:
+    with open(caminho, encoding="utf-8-sig") as arquivo:
         for bruta in arquivo:
             linha = bruta.strip()
             if not linha or linha.startswith("#"):
