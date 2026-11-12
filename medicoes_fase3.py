@@ -248,7 +248,7 @@ def main():
     p.add_argument("--pasta", default="dados_teste", help="pasta dos arquivos de carga (padrao: dados_teste)")
     p.add_argument("--saida", default=".", help="pasta de saida (padrao: a atual)")
     p.add_argument("--fase1", default=os.path.join(AQUI, "main.py"), help="programa da Fase 1")
-    p.add_argument("--fase3", default=os.path.join(AQUI, "fase3", "sistema.py"), help="programa da Fase 3")
+    p.add_argument("--fase3", default=os.path.join(AQUI, "Fase3", "sistema.py"), help="programa da Fase 3")
     args = p.parse_args()
 
     if args.validar:
