@@ -65,3 +65,8 @@ Os tempos mudam um pouco de máquina para máquina; as alturas e as respostas s�
 - **Remoção na AVL (3.1):** remoção de verdade. Um nó com dois filhos é trocado pelo sucessor (como na Fase 1), e o caminho até a raiz é rebalanceado. Custo O(log n) no pior caso.
 - **R4 e R8 (3.2):** uma segunda AVL, com chave `(linha, data, horário)`, serve de índice. Todo `REG` e todo `REM` atualizam as duas árvores. R4 e R8 passam a custar O(log n) por consulta, à custa de cerca de o dobro de memória.
 - **R7:** cada nó guarda a própria altura, então a resposta é lida na raiz em O(1).
+
+##Uso de IA:
+A IA foi utilizada principalmente para auxílio da implementação da AVL (nas partes da rotação)
+bvem como na implementação das funções R4 e R8. Além disso, usamos Inteligência Artificial para auxílio nos Testers
+e no README também.
