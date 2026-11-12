@@ -1,6 +1,6 @@
 
 
-# Uso: python experimento_r4_r8_.py dados_teste/carga_embaralhada_20000.txt
+# Uso: python experimento_r4_r8.py dados_teste/carga_embaralhada_20000.txt
 
 import importlib.util
 import os
@@ -92,7 +92,7 @@ def r8_indice(por_linha, linha, data, horario, k):
 
 def main():
     if len(sys.argv) != 2:
-        print("uso: python experimento_r4_r8_.py ARQUIVO_DE_CARGA")
+        print("uso: python experimento_r4_r8.py ARQUIVO_DE_CARGA")
         return 2
     chegadas = ler_chegadas(sys.argv[1])
     linhas = sorted({c[2] for c in chegadas})
