@@ -54,7 +54,7 @@ Cada arquivo de carga é executado 5 vezes e a tabela mostra a mediana.
 | Tabela da Fase 2 (mediana do tempo, altura e razões entre N = 1.000 e N = 20.000) | `python medicoes_fase2.py --pasta dados_teste --memoria` | `resultados_fase2.md` e `.csv` |
 | Tabela comparativa Fase 1 x Fase 3 (tempo, altura e memória) e verificação do limite 1,45 × log₂(n + 2) | `python medicoes_fase3.py --pasta dados_teste` | `resultados_fase3.md` e `.csv` |
 | Rotações que a AVL faz ao processar o `pequeno.txt` (ilustração) | `python medicoes_fase3.py --rotacoes dados_teste/pequeno.txt` | só na tela |
-| Custo de R4 e R8 conforme os registros crescem (item 3.2) | **[PENDENTE: comando ainda não criado]** | |
+| Custo de R4 e R8 conforme os registros crescem (item 3.2) | python experimento_r4_r8.py dados_teste/carga_embaralhada_20000.txt | só na tela |
 | Árvore da Fase 1 após as 7 primeiras chegadas (ilustração) | **[PREENCHER: como foram geradas as `.svg`]** | `arvore_7_*.svg` |
 
 Os tempos mudam um pouco de máquina para máquina; as alturas e as respostas são sempre as mesmas.
