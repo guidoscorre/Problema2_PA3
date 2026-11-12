@@ -247,7 +247,12 @@ class ArvoreAVL:
         self.tamanho -= 1
         self._corrigir_caminho(caminho)
         return True
-
+      
+       def linhas(self, data1, horario1, data2, horario2):
+        
+        if (data1, horario1) > (data2, horario2):
+            return
+        fim = (data2, horario2)
 
 # ======================================================================
 #  O SISTEMA: usa as duas arvores para responder R1 a R8
